@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"realtime-api/internal/jwt"
 	"realtime-api/internal/logger"
 	"realtime-api/internal/model"
 	"realtime-api/internal/service"
@@ -33,6 +34,24 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 	}
 
 	// TODO: Add validation here
+	if req.Username == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Username is required",
+		})
+	}
+	if req.Password == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Password is required",
+		})
+	}
+	if req.Email == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Email is required",
+		})
+	}
 
 	user, err := h.userService.CreateUser(c.Request().Context(), &req)
 	if err != nil {
@@ -155,15 +174,40 @@ func (h *UserHandler) LoginUser(c echo.Context) error {
 	// Remove password from response
 	user.Password = ""
 
-	// TODO: Generate JWT token here
-	token := "fake-jwt-token-for-now"
+	// Generate JWT token with session
+	sessionID := uuid.New()
+	deviceID := c.Request().Header.Get("User-Agent") // Use User-Agent as device identifier
+	if deviceID == "" {
+		deviceID = "unknown-device"
+	}
+
+	jwtService := jwt.GetService()
+	if jwtService == nil {
+		logger.Error("JWT service not initialized")
+		return c.JSON(http.StatusInternalServerError, model.APIResponse{
+			Success: false,
+			Message: "Authentication service unavailable",
+		})
+	}
+
+	accessToken, refreshToken, expiresAt, err := jwtService.GenerateTokens(user, sessionID, deviceID)
+	if err != nil {
+		logger.Error("Failed to generate JWT tokens", logger.WithField("error", err.Error()))
+		return c.JSON(http.StatusInternalServerError, model.APIResponse{
+			Success: false,
+			Message: "Failed to generate authentication tokens",
+		})
+	}
 
 	return c.JSON(http.StatusOK, model.APIResponse{
 		Success: true,
 		Message: "Login successful",
 		Data: map[string]interface{}{
-			"user":  user,
-			"token": token,
+			"user":          user,
+			"access_token":  accessToken,
+			"refresh_token": refreshToken,
+			"expires_at":    expiresAt,
+			"session_id":    sessionID,
 		},
 	})
 }

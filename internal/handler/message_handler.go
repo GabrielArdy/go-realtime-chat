@@ -32,8 +32,10 @@ func (h *MessageHandler) SendMessage(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	message, err := h.messageService.SendMessage(c.Request().Context(), &req, userID)
 	if err != nil {
@@ -63,8 +65,10 @@ func (h *MessageHandler) GetMessage(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	message, err := h.messageService.GetMessageByID(c.Request().Context(), messageID, userID)
 	if err != nil {
@@ -114,8 +118,10 @@ func (h *MessageHandler) GetRoomMessages(c echo.Context) error {
 		}
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	messages, meta, err := h.messageService.GetMessages(c.Request().Context(), roomID, userID, page, limit)
 	if err != nil {
@@ -159,8 +165,10 @@ func (h *MessageHandler) EditMessage(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	message, err := h.messageService.EditMessage(c.Request().Context(), messageID, &req, userID)
 	if err != nil {
@@ -190,8 +198,10 @@ func (h *MessageHandler) DeleteMessage(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.messageService.DeleteMessage(c.Request().Context(), messageID, userID); err != nil {
 		logger.Error("Failed to delete message", logger.WithField("error", err.Error()))
@@ -228,8 +238,10 @@ func (h *MessageHandler) ReactToMessage(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.messageService.ReactToMessage(c.Request().Context(), messageID, &req, userID); err != nil {
 		logger.Error("Failed to add reaction", logger.WithField("error", err.Error()))
@@ -265,8 +277,10 @@ func (h *MessageHandler) RemoveReaction(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.messageService.RemoveReaction(c.Request().Context(), messageID, emoji, userID); err != nil {
 		logger.Error("Failed to remove reaction", logger.WithField("error", err.Error()))
@@ -294,8 +308,10 @@ func (h *MessageHandler) MarkAsRead(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.messageService.MarkAsRead(c.Request().Context(), messageID, userID); err != nil {
 		logger.Error("Failed to mark message as read", logger.WithField("error", err.Error()))
@@ -323,8 +339,10 @@ func (h *MessageHandler) StartTyping(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.messageService.StartTyping(c.Request().Context(), roomID, userID); err != nil {
 		logger.Error("Failed to start typing", logger.WithField("error", err.Error()))
@@ -352,8 +370,10 @@ func (h *MessageHandler) StopTyping(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.messageService.StopTyping(c.Request().Context(), roomID, userID); err != nil {
 		logger.Error("Failed to stop typing", logger.WithField("error", err.Error()))

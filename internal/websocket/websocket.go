@@ -53,8 +53,30 @@ var (
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-			// TODO: Implement proper origin checking for production
-			return true
+			// In production, implement proper origin checking
+			origin := r.Header.Get("Origin")
+
+			// Allow all origins in development
+			// In production, check against allowed origins list
+			allowedOrigins := []string{
+				"http://localhost:3000", // React dev server
+				"http://localhost:8080", // Backend server
+				"https://yourapp.com",   // Production frontend
+			}
+
+			// For development, allow any origin
+			if origin == "" {
+				return true // Allow connections without Origin header (e.g., native apps)
+			}
+
+			for _, allowed := range allowedOrigins {
+				if origin == allowed {
+					return true
+				}
+			}
+
+			logger.Warn("WebSocket connection rejected", logger.WithField("origin", origin))
+			return false // Reject unknown origins
 		},
 	}
 

@@ -33,8 +33,10 @@ func (h *RoomHandler) CreateRoom(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	room, err := h.roomService.CreateRoom(c.Request().Context(), &req, userID)
 	if err != nil {
@@ -64,8 +66,10 @@ func (h *RoomHandler) GetRoom(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	room, err := h.roomService.GetRoomByID(c.Request().Context(), roomID, userID)
 	if err != nil {
@@ -106,8 +110,10 @@ func (h *RoomHandler) ListRooms(c echo.Context) error {
 		}
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	var rooms []model.Room
 	var meta *model.PaginationMeta
@@ -171,8 +177,10 @@ func (h *RoomHandler) UpdateRoom(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	room, err := h.roomService.UpdateRoom(c.Request().Context(), roomID, &req, userID)
 	if err != nil {
@@ -202,8 +210,10 @@ func (h *RoomHandler) DeleteRoom(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.roomService.DeleteRoom(c.Request().Context(), roomID, userID); err != nil {
 		logger.Error("Failed to delete room", logger.WithField("error", err.Error()))
@@ -231,8 +241,10 @@ func (h *RoomHandler) JoinRoom(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.roomService.JoinRoom(c.Request().Context(), roomID, userID); err != nil {
 		logger.Error("Failed to join room", logger.WithFields(map[string]interface{}{
@@ -267,8 +279,10 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.roomService.LeaveRoom(c.Request().Context(), roomID, userID); err != nil {
 		logger.Error("Failed to leave room", logger.WithFields(map[string]interface{}{
@@ -342,10 +356,12 @@ func (h *RoomHandler) AddMember(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get inviter user ID from JWT token
-	inviterID := uuid.New() // Placeholder
+	inviterUserID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
-	if err := h.roomService.AddMember(c.Request().Context(), roomID, req.UserID, inviterID); err != nil {
+	if err := h.roomService.AddMember(c.Request().Context(), roomID, req.UserID, inviterUserID); err != nil {
 		logger.Error("Failed to add room member", logger.WithField("error", err.Error()))
 		return c.JSON(http.StatusBadRequest, model.APIResponse{
 			Success: false,
@@ -384,10 +400,12 @@ func (h *RoomHandler) RemoveMember(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get remover user ID from JWT token
-	removerID := uuid.New() // Placeholder
+	removerUserID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
-	if err := h.roomService.RemoveMember(c.Request().Context(), roomID, userID, removerID); err != nil {
+	if err := h.roomService.RemoveMember(c.Request().Context(), roomID, userID, removerUserID); err != nil {
 		logger.Error("Failed to remove room member", logger.WithField("error", err.Error()))
 		return c.JSON(http.StatusBadRequest, model.APIResponse{
 			Success: false,
@@ -425,10 +443,12 @@ func (h *RoomHandler) CreateInvite(c echo.Context) error {
 		})
 	}
 
-	// TODO: Get inviter user ID from JWT token
-	inviterID := uuid.New() // Placeholder
+	inviterUserID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
-	invite, err := h.roomService.CreateInvite(c.Request().Context(), roomID, inviterID, &req)
+	invite, err := h.roomService.CreateInvite(c.Request().Context(), roomID, inviterUserID, &req)
 	if err != nil {
 		logger.Error("Failed to create room invite", logger.WithField("error", err.Error()))
 		return c.JSON(http.StatusBadRequest, model.APIResponse{
@@ -448,8 +468,10 @@ func (h *RoomHandler) CreateInvite(c echo.Context) error {
 func (h *RoomHandler) AcceptInvite(c echo.Context) error {
 	inviteCodeStr := c.Param("invite_code")
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	room, err := h.roomService.AcceptInvite(c.Request().Context(), inviteCodeStr, userID)
 	if err != nil {
@@ -476,8 +498,10 @@ func (h *RoomHandler) AcceptInvite(c echo.Context) error {
 func (h *RoomHandler) RejectInvite(c echo.Context) error {
 	inviteCodeStr := c.Param("invite_code")
 
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	if err := h.roomService.RejectInvite(c.Request().Context(), inviteCodeStr, userID); err != nil {
 		logger.Error("Failed to reject room invite", logger.WithField("error", err.Error()))
@@ -496,8 +520,10 @@ func (h *RoomHandler) RejectInvite(c echo.Context) error {
 
 // ListUserChatRooms returns paginated list of user's chat rooms for chat list display
 func (h *RoomHandler) ListUserChatRooms(c echo.Context) error {
-	// TODO: Get user ID from JWT token
-	userID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	// Get pagination parameters
 	page := 1
@@ -540,8 +566,10 @@ func (h *RoomHandler) ListUserChatRooms(c echo.Context) error {
 
 // CreateOrGetDirectRoom creates or gets an existing direct room between two users
 func (h *RoomHandler) CreateOrGetDirectRoom(c echo.Context) error {
-	// TODO: Get user ID from JWT token
-	currentUserID := uuid.New() // Placeholder
+	userID, httpErr := RequireAuth(c)
+	if httpErr != nil {
+		return c.JSON(httpErr.Code, httpErr.Message)
+	}
 
 	otherUserIDStr := c.Param("user_id")
 	otherUserID, err := uuid.Parse(otherUserIDStr)
@@ -553,17 +581,17 @@ func (h *RoomHandler) CreateOrGetDirectRoom(c echo.Context) error {
 	}
 
 	// Prevent creating direct room with self
-	if currentUserID == otherUserID {
+	if userID == otherUserID {
 		return c.JSON(http.StatusBadRequest, model.APIResponse{
 			Success: false,
 			Message: "Cannot create direct room with yourself",
 		})
 	}
 
-	room, err := h.roomService.CreateOrGetDirectRoom(c.Request().Context(), currentUserID, otherUserID)
+	room, err := h.roomService.CreateOrGetDirectRoom(c.Request().Context(), userID, otherUserID)
 	if err != nil {
 		logger.Error("Failed to create or get direct room", logger.WithFields(map[string]interface{}{
-			"current_user_id": currentUserID,
+			"current_user_id": userID,
 			"other_user_id":   otherUserID,
 			"error":           err.Error(),
 		}))
