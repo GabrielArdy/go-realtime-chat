@@ -3,14 +3,16 @@
 
 ### 📋 Table of Contents
 1. [Overview](#overview)
-2. [Authentication Flow](#authentication-flow)
-3. [WebSocket Connection](#websocket-connection)
-4. [API Endpoints](#api-endpoints)
-5. [Real-time Events](#real-time-events)
-6. [Chat Implementation](#chat-implementation)
-7. [Code Examples](#code-examples)
-8. [Error Handling](#error-handling)
-9. [Best Practices](#best-practices)
+2. [API Schemas](#api-schemas)
+3. [WebSocket Payload Schemas](#websocket-payload-schemas)
+4. [Authentication Flow](#authentication-flow)
+5. [WebSocket Connection](#websocket-connection)
+6. [API Endpoints](#api-endpoints)
+7. [Real-time Events](#real-time-events)
+8. [Chat Implementation](#chat-implementation)
+9. [Code Examples](#code-examples)
+10. [Error Handling](#error-handling)
+11. [Best Practices](#best-practices)
 
 ---
 
@@ -27,6 +29,796 @@ This guide provides complete integration instructions for frontend applications 
 ### Architecture Flow
 ```
 Frontend App ↔ REST API (CRUD) ↔ Event System ↔ WebSocket ↔ Real-time Updates
+```
+
+---
+
+## 📊 API Schemas
+
+### Standard Response Format
+
+#### Success Response
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": {
+    // Response data here
+  },
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "total_pages": 5
+  }
+}
+```
+
+#### Error Response
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "details": [
+      {
+        "field": "username",
+        "message": "Username is required"
+      }
+    ]
+  }
+}
+```
+
+### Authentication Schemas
+
+#### Login Request
+```json
+{
+  "username": "john_doe",
+  "password": "securePassword123"
+}
+```
+
+#### Login Response
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "uuid-string",
+      "username": "john_doe",
+      "email": "john@example.com",
+      "display_name": "John Doe",
+      "avatar": "https://example.com/avatar.jpg",
+      "status": "online",
+      "is_verified": true,
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    }
+  }
+}
+```
+
+#### Register Request
+```json
+{
+  "username": "john_doe",
+  "email": "john@example.com",
+  "password": "securePassword123",
+  "display_name": "John Doe"
+}
+```
+
+### User Schemas
+
+#### User Object
+```json
+{
+  "id": "uuid-string",
+  "username": "john_doe",
+  "email": "john@example.com",
+  "display_name": "John Doe",
+  "avatar": "https://example.com/avatar.jpg",
+  "status": "online",
+  "last_seen": "2023-01-01T00:00:00Z",
+  "is_verified": true,
+  "created_at": "2023-01-01T00:00:00Z",
+  "updated_at": "2023-01-01T00:00:00Z"
+}
+```
+
+### Room Schemas
+
+#### Room Object
+```json
+{
+  "id": "uuid-string",
+  "name": "General Chat",
+  "description": "Main discussion room",
+  "type": "group",
+  "avatar": "https://example.com/room-avatar.jpg",
+  "is_public": true,
+  "max_members": 100,
+  "member_count": 25,
+  "created_by": "uuid-string",
+  "created_at": "2023-01-01T00:00:00Z",
+  "updated_at": "2023-01-01T00:00:00Z",
+  "last_message": {
+    "id": "uuid-string",
+    "content": "Hello everyone!",
+    "type": "text",
+    "user": {
+      "id": "uuid-string",
+      "username": "jane_doe",
+      "display_name": "Jane Doe"
+    },
+    "created_at": "2023-01-01T12:00:00Z"
+  },
+  "unread_count": 3
+}
+```
+
+#### Create Room Request
+```json
+{
+  "name": "Project Discussion",
+  "description": "Discussion for project XYZ",
+  "type": "group",
+  "avatar": "https://example.com/avatar.jpg",
+  "is_public": false,
+  "max_members": 50
+}
+```
+
+#### Room List Response
+```json
+{
+  "success": true,
+  "data": {
+    "rooms": [
+      {
+        // Room object here
+      }
+    ]
+  },
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 5,
+    "total_pages": 1
+  }
+}
+```
+
+### Message Schemas
+
+#### Message Object
+```json
+{
+  "id": "uuid-string",
+  "room_id": "uuid-string",
+  "user_id": "uuid-string",
+  "content": "Hello, how are you?",
+  "type": "text",
+  "reply_to": "uuid-string",
+  "attachments": [
+    {
+      "id": "uuid-string",
+      "filename": "document.pdf",
+      "url": "https://example.com/files/document.pdf",
+      "type": "file",
+      "size": 1024000
+    }
+  ],
+  "reactions": [
+    {
+      "emoji": "👍",
+      "count": 3,
+      "users": ["uuid-1", "uuid-2", "uuid-3"],
+      "user_reacted": true
+    }
+  ],
+  "user": {
+    "id": "uuid-string",
+    "username": "john_doe",
+    "display_name": "John Doe",
+    "avatar": "https://example.com/avatar.jpg"
+  },
+  "edited_at": null,
+  "created_at": "2023-01-01T12:00:00Z",
+  "updated_at": "2023-01-01T12:00:00Z"
+}
+```
+
+#### Send Message Request
+```json
+{
+  "room_id": "uuid-string",
+  "content": "Hello everyone!",
+  "type": "text",
+  "reply_to": "uuid-string",
+  "attachments": [
+    {
+      "filename": "image.jpg",
+      "url": "https://example.com/uploads/image.jpg",
+      "type": "image",
+      "size": 524288
+    }
+  ]
+}
+```
+
+#### Edit Message Request
+```json
+{
+  "content": "Updated message content"
+}
+```
+
+#### Add Reaction Request
+```json
+{
+  "emoji": "👍"
+}
+```
+
+#### Messages List Response
+```json
+{
+  "success": true,
+  "data": {
+    "messages": [
+      {
+        // Message object here
+      }
+    ]
+  },
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 150,
+    "total_pages": 3
+  }
+}
+```
+
+### Room Member Schemas
+
+#### Room Member Object
+```json
+{
+  "user_id": "uuid-string",
+  "room_id": "uuid-string",
+  "role": "member",
+  "joined_at": "2023-01-01T00:00:00Z",
+  "user": {
+    "id": "uuid-string",
+    "username": "john_doe",
+    "display_name": "John Doe",
+    "avatar": "https://example.com/avatar.jpg",
+    "status": "online"
+  }
+}
+```
+
+#### Add Member Request
+```json
+{
+  "user_id": "uuid-string",
+  "role": "member"
+}
+```
+
+---
+
+## 🔌 WebSocket Payload Schemas
+
+### Connection & Authentication
+
+#### Authentication Message (Client → Server)
+```json
+{
+  "type": "auth",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### Authentication Response (Server → Client)
+```json
+{
+  "type": "auth_response",
+  "success": true,
+  "message": "Authentication successful",
+  "user_id": "uuid-string"
+}
+```
+
+#### Join Room Message (Client → Server)
+```json
+{
+  "type": "join_room",
+  "room_id": "uuid-string"
+}
+```
+
+#### Leave Room Message (Client → Server)
+```json
+{
+  "type": "leave_room",
+  "room_id": "uuid-string"
+}
+```
+
+### Message Events
+
+#### New Message (Server → Client)
+```json
+{
+  "type": "message",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "message": {
+    "id": "uuid-string",
+    "room_id": "uuid-string",
+    "user_id": "uuid-string",
+    "content": "Hello everyone!",
+    "type": "text",
+    "reply_to": null,
+    "attachments": [],
+    "reactions": [],
+    "user": {
+      "id": "uuid-string",
+      "username": "john_doe",
+      "display_name": "John Doe",
+      "avatar": "https://example.com/avatar.jpg"
+    },
+    "created_at": "2023-01-01T12:00:00Z",
+    "updated_at": "2023-01-01T12:00:00Z"
+  },
+  "timestamp": "2023-01-01T12:00:00Z"
+}
+```
+
+#### Message Edited (Server → Client)
+```json
+{
+  "type": "message_edit",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "message_id": "uuid-string",
+  "content": "Updated message content",
+  "edited_at": "2023-01-01T12:05:00Z",
+  "user_id": "uuid-string",
+  "timestamp": "2023-01-01T12:05:00Z"
+}
+```
+
+#### Message Deleted (Server → Client)
+```json
+{
+  "type": "message_delete",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "message_id": "uuid-string",
+  "user_id": "uuid-string",
+  "timestamp": "2023-01-01T12:10:00Z"
+}
+```
+
+#### Message Reaction (Server → Client)
+```json
+{
+  "type": "message_reaction",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "message_id": "uuid-string",
+  "emoji": "👍",
+  "action": "add",
+  "user_id": "uuid-string",
+  "reaction_count": 5,
+  "timestamp": "2023-01-01T12:15:00Z"
+}
+```
+
+### Typing Events
+
+#### Start Typing (Client → Server)
+```json
+{
+  "type": "typing_start",
+  "room_id": "uuid-string"
+}
+```
+
+#### Stop Typing (Client → Server)
+```json
+{
+  "type": "typing_stop",
+  "room_id": "uuid-string"
+}
+```
+
+#### Typing Started (Server → Client)
+```json
+{
+  "type": "typing_start",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "user_id": "uuid-string",
+  "user": {
+    "id": "uuid-string",
+    "username": "jane_doe",
+    "display_name": "Jane Doe"
+  },
+  "timestamp": "2023-01-01T12:20:00Z"
+}
+```
+
+#### Typing Stopped (Server → Client)
+```json
+{
+  "type": "typing_stop",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "user_id": "uuid-string",
+  "user": {
+    "id": "uuid-string",
+    "username": "jane_doe",
+    "display_name": "Jane Doe"
+  },
+  "timestamp": "2023-01-01T12:22:00Z"
+}
+```
+
+### Room Events
+
+#### User Joined Room (Server → Client)
+```json
+{
+  "type": "user_join",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "user_id": "uuid-string",
+  "user": {
+    "id": "uuid-string",
+    "username": "new_user",
+    "display_name": "New User",
+    "avatar": "https://example.com/avatar.jpg"
+  },
+  "role": "member",
+  "timestamp": "2023-01-01T12:25:00Z"
+}
+```
+
+#### User Left Room (Server → Client)
+```json
+{
+  "type": "user_leave",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "user_id": "uuid-string",
+  "user": {
+    "id": "uuid-string",
+    "username": "leaving_user",
+    "display_name": "Leaving User"
+  },
+  "timestamp": "2023-01-01T12:30:00Z"
+}
+```
+
+#### Room Updated (Server → Client)
+```json
+{
+  "type": "room_update",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "changes": {
+    "name": "Updated Room Name",
+    "description": "New description"
+  },
+  "updated_by": "uuid-string",
+  "timestamp": "2023-01-01T12:35:00Z"
+}
+```
+
+#### Room Deleted (Server → Client)
+```json
+{
+  "type": "room_delete",
+  "event_id": "uuid-string",
+  "room_id": "uuid-string",
+  "deleted_by": "uuid-string",
+  "timestamp": "2023-01-01T12:40:00Z"
+}
+```
+
+### User Status Events
+
+#### User Status Change (Server → Client)
+```json
+{
+  "type": "user_status_change",
+  "event_id": "uuid-string",
+  "user_id": "uuid-string",
+  "status": "online",
+  "last_seen": "2023-01-01T12:45:00Z",
+  "timestamp": "2023-01-01T12:45:00Z"
+}
+```
+
+#### User Profile Update (Server → Client)
+```json
+{
+  "type": "user_profile_update",
+  "event_id": "uuid-string",
+  "user_id": "uuid-string",
+  "changes": {
+    "display_name": "Updated Name",
+    "avatar": "https://example.com/new-avatar.jpg"
+  },
+  "timestamp": "2023-01-01T12:50:00Z"
+}
+```
+
+### System Events
+
+#### Notification (Server → Client)
+```json
+{
+  "type": "notification",
+  "event_id": "uuid-string",
+  "notification_type": "mention",
+  "title": "You were mentioned",
+  "message": "John Doe mentioned you in General Chat",
+  "data": {
+    "room_id": "uuid-string",
+    "message_id": "uuid-string",
+    "mentioned_by": "uuid-string"
+  },
+  "priority": "high",
+  "timestamp": "2023-01-01T12:55:00Z"
+}
+```
+
+#### Error Event (Server → Client)
+```json
+{
+  "type": "error",
+  "event_id": "uuid-string",
+  "error_code": "UNAUTHORIZED",
+  "message": "Authentication required",
+  "details": {
+    "action": "join_room",
+    "room_id": "uuid-string"
+  },
+  "timestamp": "2023-01-01T13:00:00Z"
+}
+```
+
+#### Heartbeat/Ping (Bidirectional)
+```json
+{
+  "type": "ping",
+  "timestamp": "2023-01-01T13:05:00Z"
+}
+```
+
+```json
+{
+  "type": "pong",
+  "timestamp": "2023-01-01T13:05:00Z"
+}
+```
+
+### File Upload Events
+
+#### File Upload Progress (Server → Client)
+```json
+{
+  "type": "upload_progress",
+  "event_id": "uuid-string",
+  "upload_id": "uuid-string",
+  "filename": "document.pdf",
+  "progress": 65,
+  "total_size": 1024000,
+  "uploaded_size": 665600,
+  "timestamp": "2023-01-01T13:10:00Z"
+}
+```
+
+#### File Upload Complete (Server → Client)
+```json
+{
+  "type": "upload_complete",
+  "event_id": "uuid-string",
+  "upload_id": "uuid-string",
+  "file": {
+    "id": "uuid-string",
+    "filename": "document.pdf",
+    "url": "https://example.com/files/document.pdf",
+    "type": "file",
+    "size": 1024000,
+    "mime_type": "application/pdf"
+  },
+  "timestamp": "2023-01-01T13:12:00Z"
+}
+```
+
+### WebSocket Message Types Summary
+
+| Event Type | Direction | Description |
+|------------|-----------|-------------|
+| `auth` | Client → Server | Authenticate connection |
+| `auth_response` | Server → Client | Authentication result |
+| `join_room` | Client → Server | Join a room |
+| `leave_room` | Client → Server | Leave a room |
+| `message` | Server → Client | New message received |
+| `message_edit` | Server → Client | Message was edited |
+| `message_delete` | Server → Client | Message was deleted |
+| `message_reaction` | Server → Client | Reaction added/removed |
+| `typing_start` | Bidirectional | User started typing |
+| `typing_stop` | Bidirectional | User stopped typing |
+| `user_join` | Server → Client | User joined room |
+| `user_leave` | Server → Client | User left room |
+| `user_status_change` | Server → Client | User online status changed |
+| `user_profile_update` | Server → Client | User profile updated |
+| `room_update` | Server → Client | Room details updated |
+| `room_delete` | Server → Client | Room was deleted |
+| `notification` | Server → Client | System notification |
+| `error` | Server → Client | Error occurred |
+| `ping`/`pong` | Bidirectional | Connection heartbeat |
+| `upload_progress` | Server → Client | File upload progress |
+| `upload_complete` | Server → Client | File upload completed |
+
+### Backend Event Type Constants
+
+The backend defines the following event type constants that will be sent through WebSocket messages:
+
+#### User Events
+```javascript
+const USER_EVENTS = {
+  USER_ONLINE: "event.user.online",
+  USER_OFFLINE: "event.user.offline",
+  USER_TYPING_START: "event.user.typing.start",
+  USER_TYPING_STOP: "event.user.typing.stop",
+  USER_STATUS_CHANGE: "event.user.status.change",
+  USER_PROFILE_UPDATE: "event.user.profile.update"
+};
+```
+
+#### Room Events
+```javascript
+const ROOM_EVENTS = {
+  ROOM_CREATE: "event.room.create",
+  ROOM_UPDATE: "event.room.update",
+  ROOM_DELETE: "event.room.delete",
+  ROOM_JOIN: "event.room.join",
+  ROOM_LEAVE: "event.room.leave",
+  ROOM_MEMBER_ADD: "event.room.member.add",
+  ROOM_MEMBER_REMOVE: "event.room.member.remove",
+  ROOM_MEMBER_ROLE_UPDATE: "event.room.member.role.update",
+  ROOM_INVITE_CREATE: "event.room.invite.create",
+  ROOM_INVITE_ACCEPT: "event.room.invite.accept",
+  ROOM_INVITE_REJECT: "event.room.invite.reject"
+};
+```
+
+#### Message Events
+```javascript
+const MESSAGE_EVENTS = {
+  MESSAGE_SEND: "event.message.send",
+  MESSAGE_EDIT: "event.message.edit",
+  MESSAGE_DELETE: "event.message.delete",
+  MESSAGE_READ: "event.message.read",
+  MESSAGE_REACTION_ADD: "event.message.reaction.add",
+  MESSAGE_REACTION_REMOVE: "event.message.reaction.remove"
+};
+```
+
+#### System Events
+```javascript
+const SYSTEM_EVENTS = {
+  SYSTEM_MAINTENANCE: "event.system.maintenance",
+  SYSTEM_SHUTDOWN: "event.system.shutdown",
+  SYSTEM_BROADCAST: "event.system.broadcast"
+};
+```
+
+#### All Event Types Combined
+```javascript
+const EVENT_TYPES = {
+  ...USER_EVENTS,
+  ...ROOM_EVENTS,
+  ...MESSAGE_EVENTS,
+  ...SYSTEM_EVENTS
+};
+```
+
+#### Event Levels
+```javascript
+const EVENT_LEVELS = {
+  USER: "user",
+  ROOM: "room",
+  MESSAGE: "message",
+  SYSTEM: "system"
+};
+```
+
+#### Example Usage in Frontend
+```javascript
+// Register specific event handlers using constants
+chatWS.on(EVENT_TYPES.MESSAGE_SEND, handleNewMessage);
+chatWS.on(EVENT_TYPES.MESSAGE_EDIT, handleMessageEdit);
+chatWS.on(EVENT_TYPES.MESSAGE_DELETE, handleMessageDelete);
+chatWS.on(EVENT_TYPES.USER_TYPING_START, handleTypingStart);
+chatWS.on(EVENT_TYPES.USER_TYPING_STOP, handleTypingStop);
+chatWS.on(EVENT_TYPES.ROOM_JOIN, handleUserJoin);
+chatWS.on(EVENT_TYPES.ROOM_LEAVE, handleUserLeave);
+chatWS.on(EVENT_TYPES.MESSAGE_REACTION_ADD, handleMessageReaction);
+chatWS.on(EVENT_TYPES.USER_STATUS_CHANGE, handleUserStatusChange);
+
+// Check event types
+const isMessageEvent = (eventType) => {
+  return Object.values(MESSAGE_EVENTS).includes(eventType);
+};
+
+const isUserEvent = (eventType) => {
+  return Object.values(USER_EVENTS).includes(eventType);
+};
+
+// Event handler with type checking
+chatWS.handleMessage = (message) => {
+  const { type } = message;
+  
+  switch (type) {
+    case EVENT_TYPES.MESSAGE_SEND:
+      handleNewMessage(message);
+      break;
+    case EVENT_TYPES.MESSAGE_EDIT:
+      handleMessageEdit(message);
+      break;
+    case EVENT_TYPES.MESSAGE_DELETE:
+      handleMessageDelete(message);
+      break;
+    case EVENT_TYPES.USER_TYPING_START:
+      handleTypingStart(message);
+      break;
+    case EVENT_TYPES.USER_TYPING_STOP:
+      handleTypingStop(message);
+      break;
+    case EVENT_TYPES.ROOM_JOIN:
+      handleUserJoin(message);
+      break;
+    case EVENT_TYPES.ROOM_LEAVE:
+      handleUserLeave(message);
+      break;
+    case EVENT_TYPES.MESSAGE_REACTION_ADD:
+    case EVENT_TYPES.MESSAGE_REACTION_REMOVE:
+      handleMessageReaction(message);
+      break;
+    case EVENT_TYPES.USER_STATUS_CHANGE:
+      handleUserStatusChange(message);
+      break;
+    case EVENT_TYPES.USER_PROFILE_UPDATE:
+      handleUserProfileUpdate(message);
+      break;
+    case EVENT_TYPES.ROOM_UPDATE:
+      handleRoomUpdate(message);
+      break;
+    case EVENT_TYPES.ROOM_DELETE:
+      handleRoomDelete(message);
+      break;
+    case EVENT_TYPES.SYSTEM_BROADCAST:
+      handleSystemBroadcast(message);
+      break;
+    default:
+      console.warn(`Unhandled event type: ${type}`);
+  }
+};
 ```
 
 ---

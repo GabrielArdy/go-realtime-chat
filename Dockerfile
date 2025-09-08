@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.21-alpine3.18 AS builder
+FROM golang:1.22-alpine3.19 AS builder
 
 # Install git and build dependencies
 RUN apk update && \
@@ -26,7 +26,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     cmd/server/main.go
 
 # Final stage
-FROM alpine:3.18
+FROM alpine:3.19
 
 # Update package index and install dependencies
 RUN apk update && \
