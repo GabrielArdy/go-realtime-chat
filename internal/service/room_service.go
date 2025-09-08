@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -20,6 +21,7 @@ type RoomService interface {
 	UpdateRoom(ctx context.Context, roomID uuid.UUID, req *model.UpdateRoomRequest, userID uuid.UUID) (*model.Room, error)
 	DeleteRoom(ctx context.Context, roomID uuid.UUID, userID uuid.UUID) error
 	GetUserRooms(ctx context.Context, userID uuid.UUID) ([]model.Room, error)
+	ListUserChatRooms(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.Room, *model.PaginationMeta, error)
 	GetPublicRooms(ctx context.Context, page, limit int) ([]model.Room, *model.PaginationMeta, error)
 	SearchRooms(ctx context.Context, query string, page, limit int) ([]model.Room, *model.PaginationMeta, error)
 
@@ -35,6 +37,9 @@ type RoomService interface {
 	CreateInvite(ctx context.Context, roomID, inviterID uuid.UUID, req *model.CreateInviteRequest) (*model.RoomInvite, error)
 	AcceptInvite(ctx context.Context, inviteCode string, userID uuid.UUID) (*model.Room, error)
 	RejectInvite(ctx context.Context, inviteCode string, userID uuid.UUID) error
+
+	// Private Message Management
+	CreateOrGetDirectRoom(ctx context.Context, userID1, userID2 uuid.UUID) (*model.Room, error)
 }
 
 type roomService struct {
@@ -251,6 +256,93 @@ func (s *roomService) GetUserRooms(ctx context.Context, userID uuid.UUID) ([]mod
 	return rooms, nil
 }
 
+// ListUserChatRooms returns paginated list of user's chat rooms with additional metadata
+func (s *roomService) ListUserChatRooms(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.Room, *model.PaginationMeta, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	// Get all user's rooms first
+	allRooms, err := s.roomRepo.GetUserRooms(ctx, userID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get user chat rooms: %w", err)
+	}
+
+	total := len(allRooms)
+
+	// Apply pagination
+	offset := (page - 1) * limit
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+
+	var rooms []model.Room
+	if offset < total {
+		rooms = allRooms[offset:end]
+	}
+
+	// Enrich rooms with additional metadata for chat list display
+	for i := range rooms {
+		// For direct rooms (2 members), get the other user's info for display
+		if rooms[i].Type == "direct" {
+			members, err := s.roomRepo.GetRoomMembers(ctx, rooms[i].ID)
+			if err != nil {
+				logger.Warn("Failed to get room members for direct room", logger.WithFields(map[string]interface{}{
+					"room_id": rooms[i].ID,
+					"error":   err.Error(),
+				}))
+				continue
+			}
+
+			// Find the other user in direct room
+			for _, member := range members {
+				if member.UserID != userID {
+					otherUser, err := s.userRepo.GetByID(ctx, member.UserID)
+					if err == nil && otherUser != nil {
+						// Set room name to other user's name for display
+						if rooms[i].Name == "" {
+							rooms[i].Name = otherUser.Username
+						}
+						// Set avatar to other user's avatar if room doesn't have one
+						if rooms[i].Avatar == "" && otherUser.Avatar != "" {
+							rooms[i].Avatar = otherUser.Avatar
+						}
+					}
+					break
+				}
+			}
+		}
+
+		// Log member count for debugging
+		members, err := s.roomRepo.GetRoomMembers(ctx, rooms[i].ID)
+		if err == nil {
+			logger.Debug("Room member count", logger.WithFields(map[string]interface{}{
+				"room_id":      rooms[i].ID,
+				"member_count": len(members),
+				"room_type":    rooms[i].Type,
+			}))
+		}
+	}
+
+	totalPages := (total + limit - 1) / limit
+
+	meta := &model.PaginationMeta{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}
+
+	return rooms, meta, nil
+}
+
 func (s *roomService) GetPublicRooms(ctx context.Context, page, limit int) ([]model.Room, *model.PaginationMeta, error) {
 	if page < 1 {
 		page = 1
@@ -459,10 +551,25 @@ func (s *roomService) AddMember(ctx context.Context, roomID, userID, inviterID u
 }
 
 func (s *roomService) RemoveMember(ctx context.Context, roomID, userID, removerID uuid.UUID) error {
+	// Get room to check type and properties
+	room, err := s.roomRepo.GetByID(ctx, roomID)
+	if err != nil {
+		return fmt.Errorf("failed to get room: %w", err)
+	}
+	if room == nil {
+		return errors.New("room not found")
+	}
+
 	// Check if remover is admin
 	members, err := s.roomRepo.GetRoomMembers(ctx, roomID)
 	if err != nil {
 		return fmt.Errorf("failed to get room members: %w", err)
+	}
+
+	// Business rule: Cannot remove members from private rooms (2 members only)
+	// Private messages (direct rooms with 2 members) should not allow member removal
+	if len(members) == 2 && (room.Type == "direct" || room.Type == "private") {
+		return errors.New("cannot remove members from private messages with only 2 participants")
 	}
 
 	isAdmin := false
@@ -486,9 +593,11 @@ func (s *roomService) RemoveMember(ctx context.Context, roomID, userID, removerI
 		logger.Warn("Failed to remove user from room cache", logger.WithField("error", err.Error()))
 	}
 
-	// Publish member remove event
+	// Publish member remove event with additional context
 	eventData := events.RoomEventData(roomID, &userID, map[string]interface{}{
-		"remover_id": removerID,
+		"remover_id":   removerID,
+		"room_type":    room.Type,
+		"member_count": len(members) - 1, // After removal
 	})
 
 	if err := s.eventPublisher.PublishRoomEvent(ctx, events.RoomMemberRemove, roomID, eventData, &removerID); err != nil {
@@ -641,4 +750,77 @@ func (s *roomService) RejectInvite(ctx context.Context, inviteCode string, userI
 	}
 
 	return nil
+}
+
+// CreateOrGetDirectRoom creates a direct room between two users or returns existing one
+func (s *roomService) CreateOrGetDirectRoom(ctx context.Context, user1ID, user2ID uuid.UUID) (*model.Room, error) {
+	// Check if direct room already exists between these users
+	user1Rooms, err := s.roomRepo.GetUserRooms(ctx, user1ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user rooms: %w", err)
+	}
+
+	// Look for existing direct room
+	for _, room := range user1Rooms {
+		if room.Type == "direct" {
+			members, err := s.roomRepo.GetRoomMembers(ctx, room.ID)
+			if err != nil {
+				continue
+			}
+
+			// Check if this room has exactly 2 members and includes both users
+			if len(members) == 2 {
+				memberUserIDs := make(map[uuid.UUID]bool)
+				for _, member := range members {
+					memberUserIDs[member.UserID] = true
+				}
+
+				if memberUserIDs[user1ID] && memberUserIDs[user2ID] {
+					return &room, nil
+				}
+			}
+		}
+	}
+
+	// Create new direct room if none exists
+	isPublic := false
+	createReq := &model.CreateRoomRequest{
+		Name:        "", // Direct rooms typically don't have names
+		Description: "Direct message",
+		Type:        "direct",
+		IsPublic:    &isPublic,
+	}
+
+	room, err := s.CreateRoom(ctx, createReq, user1ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create direct room: %w", err)
+	}
+
+	// Add the second user to the room
+	err = s.AddMember(ctx, room.ID, user2ID, user1ID)
+	if err != nil {
+		// If adding member fails, try to clean up the room
+		if deleteErr := s.DeleteRoom(ctx, room.ID, user1ID); deleteErr != nil {
+			logger.Error("Failed to cleanup room after member addition failure", logger.WithFields(map[string]interface{}{
+				"room_id": room.ID,
+				"error":   deleteErr.Error(),
+			}))
+		}
+		return nil, fmt.Errorf("failed to add second user to direct room: %w", err)
+	}
+
+	// Publish direct room created event using existing event system
+	eventData := events.RoomEventData(room.ID, &user1ID, map[string]interface{}{
+		"room_type": "direct",
+		"user2_id":  user2ID,
+	})
+
+	if err := s.eventPublisher.PublishRoomEvent(ctx, events.RoomCreate, room.ID, eventData, &user1ID); err != nil {
+		logger.Error("Failed to publish direct room created event", logger.WithFields(map[string]interface{}{
+			"room_id": room.ID,
+			"error":   err.Error(),
+		}))
+	}
+
+	return room, nil
 }

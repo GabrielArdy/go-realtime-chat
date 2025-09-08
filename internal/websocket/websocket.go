@@ -1,15 +1,17 @@
 package websocket
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"sync"
 	"time"
 
+	"realtime-api/internal/events"
 	"realtime-api/internal/jwt"
 	"realtime-api/internal/logger"
 	"realtime-api/internal/model"
-	"realtime-api/internal/rabbitmq"
+	"realtime-api/internal/redis"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -17,13 +19,15 @@ import (
 )
 
 type Hub struct {
-	clients    map[*Client]bool
-	rooms      map[uuid.UUID]map[*Client]bool
-	userRooms  map[uuid.UUID][]uuid.UUID // user_id -> room_ids
-	register   chan *Client
-	unregister chan *Client
-	broadcast  chan []byte
-	mutex      sync.RWMutex
+	clients        map[*Client]bool
+	rooms          map[uuid.UUID]map[*Client]bool
+	userRooms      map[uuid.UUID][]uuid.UUID // user_id -> room_ids
+	register       chan *Client
+	unregister     chan *Client
+	broadcast      chan []byte
+	mutex          sync.RWMutex
+	eventPublisher *events.EventPublisher
+	redis          *redis.Redis
 }
 
 type Client struct {
@@ -64,14 +68,16 @@ const (
 	maxMessageSize = 512
 )
 
-func NewHub() *Hub {
+func NewHub(redis *redis.Redis) *Hub {
 	return &Hub{
-		clients:    make(map[*Client]bool),
-		rooms:      make(map[uuid.UUID]map[*Client]bool),
-		userRooms:  make(map[uuid.UUID][]uuid.UUID),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		broadcast:  make(chan []byte, 256),
+		clients:        make(map[*Client]bool),
+		rooms:          make(map[uuid.UUID]map[*Client]bool),
+		userRooms:      make(map[uuid.UUID][]uuid.UUID),
+		register:       make(chan *Client),
+		unregister:     make(chan *Client),
+		broadcast:      make(chan []byte, 256),
+		eventPublisher: events.NewEventPublisher(redis),
+		redis:          redis,
 	}
 }
 
@@ -251,6 +257,11 @@ func (h *Hub) broadcastToRoom(roomID uuid.UUID, msgType model.WSMessageType, dat
 	h.mutex.RUnlock()
 }
 
+// BroadcastToRoom is the public method for broadcasting to a room
+func (h *Hub) BroadcastToRoom(roomID uuid.UUID, msgType model.WSMessageType, data interface{}) {
+	h.broadcastToRoom(roomID, msgType, data)
+}
+
 func (h *Hub) BroadcastToUser(userID uuid.UUID, msgType model.WSMessageType, data interface{}) {
 	message := h.createMessage(msgType, data)
 
@@ -425,8 +436,11 @@ func (c *Client) handleTypingStart(data interface{}) {
 		return
 	}
 
-	// Publish typing event to RabbitMQ
-	rabbitmq.GetClient().PublishTypingEvent(roomID.String(), c.userID.String(), true)
+	// Publish typing event using event system
+	if c.hub.eventPublisher != nil {
+		ctx := context.Background()
+		c.hub.eventPublisher.PublishTypingEvent(ctx, roomID, c.userID, true)
+	}
 
 	// Broadcast to room members
 	c.hub.broadcastToRoom(roomID, model.WSTypeTypingStart, map[string]interface{}{
@@ -452,8 +466,11 @@ func (c *Client) handleTypingStop(data interface{}) {
 		return
 	}
 
-	// Publish typing event to RabbitMQ
-	rabbitmq.GetClient().PublishTypingEvent(roomID.String(), c.userID.String(), false)
+	// Publish typing event using event system
+	if c.hub.eventPublisher != nil {
+		ctx := context.Background()
+		c.hub.eventPublisher.PublishTypingEvent(ctx, roomID, c.userID, false)
+	}
 
 	// Broadcast to room members
 	c.hub.broadcastToRoom(roomID, model.WSTypeTypingStop, map[string]interface{}{
@@ -474,10 +491,13 @@ func (c *Client) handleUserStatusChange(data interface{}) {
 		return
 	}
 
-	// Publish user status change to RabbitMQ
-	rabbitmq.GetClient().PublishUserEvent(c.userID.String(), "status_change", map[string]interface{}{
-		"status": status,
-	})
+	// Publish user status change using event system
+	if c.hub.eventPublisher != nil {
+		ctx := context.Background()
+		c.hub.eventPublisher.PublishUserEvent(ctx, events.UserStatusChange, c.userID, map[string]interface{}{
+			"status": status,
+		})
+	}
 
 	// Broadcast status change to user's rooms
 	c.mutex.RLock()
@@ -491,8 +511,8 @@ func (c *Client) handleUserStatusChange(data interface{}) {
 	c.mutex.RUnlock()
 }
 
-func Init() {
-	GlobalHub = NewHub()
+func Init(redis *redis.Redis) {
+	GlobalHub = NewHub(redis)
 	go GlobalHub.Run()
 
 	logger.Info("WebSocket hub initialized")
