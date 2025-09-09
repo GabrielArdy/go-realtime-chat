@@ -88,12 +88,12 @@ func LoadConfig(configPath string) (*Config, error) {
 	if env == "" {
 		env = "development"
 	}
-	
+
 	configName := "config"
 	if env == "production" {
 		configName = "config.prod"
 	}
-	
+
 	viper.SetConfigName(configName)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(configPath)

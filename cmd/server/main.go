@@ -192,6 +192,7 @@ func main() {
 	// Auth routes
 	auth := api.Group("/auth")
 	auth.POST("/login", userHandler.LoginUser)
+	auth.POST("/register", userHandler.RegisterUser)
 
 	// Room routes
 	rooms := api.Group("/rooms")

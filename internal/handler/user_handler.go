@@ -23,6 +23,139 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 	}
 }
 
+func (h *UserHandler) RegisterUser(c echo.Context) error {
+	var req model.CreateUserRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Invalid request body",
+			Error:   err.Error(),
+		})
+	}
+
+	// Validate required fields
+	if req.Username == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Username is required",
+		})
+	}
+	if req.Email == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Email is required",
+		})
+	}
+	if req.Password == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Password is required",
+		})
+	}
+	if req.FirstName == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "First name is required",
+		})
+	}
+	if req.LastName == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Last name is required",
+		})
+	}
+
+	// Additional validation
+	if len(req.Username) < 3 {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Username must be at least 3 characters long",
+		})
+	}
+	if len(req.Password) < 6 {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Password must be at least 6 characters long",
+		})
+	}
+
+	// Create user
+	user, err := h.userService.CreateUser(c.Request().Context(), &req)
+	if err != nil {
+		logger.Error("Failed to register user", logger.WithField("error", err.Error()))
+		
+		// Check for specific errors
+		if err.Error() == "user with email "+req.Email+" already exists" {
+			return c.JSON(http.StatusConflict, model.APIResponse{
+				Success: false,
+				Message: "Email address is already registered",
+			})
+		}
+		if err.Error() == "username "+req.Username+" already taken" {
+			return c.JSON(http.StatusConflict, model.APIResponse{
+				Success: false,
+				Message: "Username is already taken",
+			})
+		}
+		
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Failed to register user",
+			Error:   "Registration failed, please try again",
+		})
+	}
+
+	// Remove sensitive information from response
+	user.Password = ""
+
+	// Generate JWT token for immediate login after registration
+	sessionID := uuid.New()
+	deviceID := c.Request().Header.Get("User-Agent")
+	if deviceID == "" {
+		deviceID = "unknown-device"
+	}
+
+	jwtService := jwt.GetService()
+	if jwtService == nil {
+		logger.Error("JWT service not initialized")
+		// Still return success for registration, but without tokens
+		return c.JSON(http.StatusCreated, model.APIResponse{
+			Success: true,
+			Message: "User registered successfully. Please login to continue.",
+			Data:    user,
+		})
+	}
+
+	accessToken, refreshToken, expiresAt, err := jwtService.GenerateTokens(user, sessionID, deviceID)
+	if err != nil {
+		logger.Error("Failed to generate JWT tokens after registration", logger.WithField("error", err.Error()))
+		// Still return success for registration, but without tokens
+		return c.JSON(http.StatusCreated, model.APIResponse{
+			Success: true,
+			Message: "User registered successfully. Please login to continue.",
+			Data:    user,
+		})
+	}
+
+	logger.Info("User registered successfully", logger.WithFields(map[string]interface{}{
+		"user_id":  user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+	}))
+
+	return c.JSON(http.StatusCreated, model.APIResponse{
+		Success: true,
+		Message: "User registered successfully",
+		Data: map[string]interface{}{
+			"user":          user,
+			"access_token":  accessToken,
+			"refresh_token": refreshToken,
+			"expires_at":    expiresAt,
+			"session_id":    sessionID,
+		},
+	})
+}
+
 func (h *UserHandler) CreateUser(c echo.Context) error {
 	var req model.CreateUserRequest
 	if err := c.Bind(&req); err != nil {
