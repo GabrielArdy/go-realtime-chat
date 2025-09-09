@@ -7,21 +7,21 @@ server:
 
 database:
   driver: "postgres"
-  host: "${DB_HOST:localhost}"
-  port: "${DB_PORT:5432}"
-  username: "${DB_USERNAME:postgres}"
-  password: "${DB_PASSWORD:password}"
-  database: "${DB_NAME:realtime_db}"
-  ssl_mode: "${DB_SSL_MODE:require}"
+  host: "localhost"
+  port: "5432"
+  username: "postgres"
+  password: "password"
+  database: "realtime_db"
+  ssl_mode: "require"
 
 redis:
-  host: "${REDIS_HOST:localhost}"
-  port: "${REDIS_PORT:6379}"
-  password: "${REDIS_PASSWORD:}"
-  database: "${REDIS_DB:0}"
+  host: "localhost"
+  port: "6379"
+  password: ""
+  database: 0
 
 logger:
-  level: "${LOG_LEVEL:info}"
-  format: "${LOG_FORMAT:json}"
-  output: "${LOG_OUTPUT:stdout}"
+  level: "info"
+  format: "json"
+  output: "stdout"
   time_format: "2006-01-02T15:04:05Z07:00"

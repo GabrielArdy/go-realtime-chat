@@ -81,12 +81,22 @@ wait_for_dependencies() {
 validate_config() {
     echo "🔧 Validating configuration..."
     
-    # Check if config file exists
-    CONFIG_FILE="./configs/config.yml"
-    if [ ! -f "$CONFIG_FILE" ]; then
-        echo "   ⚠️  Warning: config.yml not found, using environment variables"
+    # Determine which config file to check based on environment
+    if [ "$APP_ENV" = "production" ] || [ "$GO_ENV" = "production" ]; then
+        CONFIG_FILE="./configs/config.prod.yaml"
+        FALLBACK_CONFIG="./configs/config.yaml"
     else
-        echo "   ✅ Configuration file found"
+        CONFIG_FILE="./configs/config.yaml"
+        FALLBACK_CONFIG="./configs/config.prod.yaml"
+    fi
+    
+    # Check if primary config file exists
+    if [ -f "$CONFIG_FILE" ]; then
+        echo "   ✅ Primary configuration file found: $(basename $CONFIG_FILE)"
+    elif [ -f "$FALLBACK_CONFIG" ]; then
+        echo "   ✅ Fallback configuration file found: $(basename $FALLBACK_CONFIG)"
+    else
+        echo "   ⚠️  Warning: No configuration files found, using environment variables"
     fi
     
     # Validate required environment variables

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -79,7 +80,21 @@ type LoggerConfig struct {
 var AppConfig *Config
 
 func LoadConfig(configPath string) (*Config, error) {
-	viper.SetConfigName("config")
+	// Determine config file name based on environment
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		env = os.Getenv("GO_ENV")
+	}
+	if env == "" {
+		env = "development"
+	}
+	
+	configName := "config"
+	if env == "production" {
+		configName = "config.prod"
+	}
+	
+	viper.SetConfigName(configName)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(configPath)
 	viper.AddConfigPath("./configs")
@@ -94,10 +109,12 @@ func LoadConfig(configPath string) (*Config, error) {
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Println("Config file not found, using defaults and environment variables")
+			log.Printf("Config file %s.yaml not found, using defaults and environment variables", configName)
 		} else {
 			return nil, fmt.Errorf("error reading config file: %w", err)
 		}
+	} else {
+		log.Printf("Loading configuration from: %s", viper.ConfigFileUsed())
 	}
 
 	config := &Config{}

@@ -52,6 +52,10 @@ RUN chmod +x ./realtime-server && \
     chmod +x ./entry.sh && \
     chown -R appuser:appgroup /app
 
+# Set production environment
+ENV APP_ENV=production
+ENV GO_ENV=production
+
 # Switch to non-root user
 USER appuser
 
