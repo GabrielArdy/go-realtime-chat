@@ -7,12 +7,13 @@
 3. [WebSocket Payload Schemas](#websocket-payload-schemas)
 4. [Authentication Flow](#authentication-flow)
 5. [WebSocket Connection](#websocket-connection)
-6. [API Endpoints](#api-endpoints)
-7. [Real-time Events](#real-time-events)
-8. [Chat Implementation](#chat-implementation)
-9. [Code Examples](#code-examples)
-10. [Error Handling](#error-handling)
-11. [Best Practices](#best-practices)
+6. [Real-time Features](#real-time-features)
+7. [API Endpoints](#api-endpoints)
+8. [Real-time Events](#real-time-events)
+9. [Chat Implementation](#chat-implementation)
+10. [Code Examples](#code-examples)
+11. [Error Handling](#error-handling)
+12. [Best Practices](#best-practices)
 
 ---
 
@@ -1272,6 +1273,51 @@ setupTokenRefresh();
 
 ## 🔌 WebSocket Connection
 
+### ⚠️ PERSYARATAN WAJIB untuk Koneksi WebSocket
+
+**PENTING:** Untuk terhubung ke WebSocket, Anda **WAJIB** membawa:
+
+#### 1. 🔑 JWT Token yang Valid
+WebSocket endpoint memerlukan JWT token yang valid untuk autentikasi. Token dapat diberikan melalui:
+
+**Opsi A: Query Parameter (Recommended)**
+```
+ws://localhost:8080/ws?token=YOUR_JWT_TOKEN
+```
+
+**Opsi B: Authorization Header**
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### 2. 🌐 URL WebSocket yang Benar
+- **Development**: `ws://localhost:8080/ws`
+- **Production**: `wss://your-domain.com/ws`
+
+#### 3. 📝 Cara Mendapatkan JWT Token
+1. Login terlebih dahulu menggunakan endpoint `/api/v1/auth/login`
+2. Ambil `access_token` dari response login
+3. Gunakan token tersebut untuk koneksi WebSocket
+
+**Contoh Error jika Token Tidak Valid:**
+```
+HTTP/1.1 401 Unauthorized
+{"error": "missing authentication token"}
+```
+
+### 🔧 Test Koneksi WebSocket
+
+Untuk test koneksi WebSocket, gunakan file test HTML yang tersedia:
+```
+/test/websocket-test.html
+```
+
+Buka file tersebut di browser untuk:
+- Test login dan mendapatkan JWT token
+- Test koneksi WebSocket dengan token
+- Test pengiriman berbagai jenis pesan
+- Monitor log pesan real-time
+
 ### 1. Establish Connection
 ```javascript
 class ChatWebSocket {
@@ -1382,6 +1428,177 @@ const initializeWebSocket = (token) => {
   chatWS.connect();
   return chatWS;
 };
+```
+
+---
+
+## 🚀 Real-time Features
+
+Setelah WebSocket terhubung, Anda dapat menggunakan fitur-fitur real-time berikut:
+
+### 1. 💬 Real-time Messaging
+```javascript
+// Kirim pesan real-time
+chatWS.send({
+  type: 'message',
+  data: {
+    room_id: 'room-uuid',
+    content: 'Hello, world!',
+    type: 'text'
+  }
+});
+
+// Terima pesan real-time
+chatWS.on('message', (message) => {
+  console.log('New message received:', message.data);
+  // Update UI dengan pesan baru
+  displayMessage(message.data);
+});
+```
+
+### 2. ⌨️ Typing Indicators
+```javascript
+// Kirim indikator mulai mengetik
+chatWS.send({
+  type: 'typing_start',
+  data: {
+    room_id: 'room-uuid'
+  }
+});
+
+// Kirim indikator selesai mengetik
+chatWS.send({
+  type: 'typing_stop',
+  data: {
+    room_id: 'room-uuid'
+  }
+});
+
+// Terima indikator typing dari user lain
+chatWS.on('typing_start', (event) => {
+  showTypingIndicator(event.data.user_id, event.data.username);
+});
+
+chatWS.on('typing_stop', (event) => {
+  hideTypingIndicator(event.data.user_id);
+});
+```
+
+### 3. 📊 User Status Updates
+```javascript
+// Update status user
+chatWS.send({
+  type: 'user_status_change',
+  data: {
+    status: 'online' // online, offline, away, busy, invisible
+  }
+});
+
+// Terima update status user lain
+chatWS.on('user_status_change', (event) => {
+  updateUserStatus(event.data.user_id, event.data.status);
+});
+```
+
+### 4. 🏠 Room Events
+```javascript
+// Terima notifikasi user bergabung
+chatWS.on('user_join', (event) => {
+  console.log(`${event.data.username} joined the room`);
+  addUserToRoom(event.data);
+});
+
+// Terima notifikasi user keluar
+chatWS.on('user_leave', (event) => {
+  console.log(`${event.data.username} left the room`);
+  removeUserFromRoom(event.data);
+});
+```
+
+### 5. 🔔 Real-time Notifications
+```javascript
+// Terima notifikasi real-time
+chatWS.on('notification', (event) => {
+  const notification = event.data;
+  
+  // Tampilkan notifikasi berdasarkan type
+  switch (notification.type) {
+    case 'message':
+      showMessageNotification(notification);
+      break;
+    case 'mention':
+      showMentionNotification(notification);
+      break;
+    case 'room_invite':
+      showInviteNotification(notification);
+      break;
+    default:
+      showGenericNotification(notification);
+  }
+});
+```
+
+### 6. 🎯 Keep Connection Alive
+```javascript
+// Kirim ping untuk menjaga koneksi
+setInterval(() => {
+  if (chatWS.ws && chatWS.ws.readyState === WebSocket.OPEN) {
+    chatWS.send({
+      type: 'ping',
+      data: {}
+    });
+  }
+}, 30000); // Ping setiap 30 detik
+
+// Terima pong response
+chatWS.on('pong', (event) => {
+  console.log('Connection is alive');
+});
+```
+
+### 7. 🔄 Reconnection Strategy
+```javascript
+class ReliableWebSocket extends ChatWebSocket {
+  constructor(token) {
+    super(token);
+    this.heartbeatInterval = null;
+    this.reconnectDelay = 1000; // Start with 1 second
+    this.maxReconnectDelay = 30000; // Max 30 seconds
+  }
+
+  connect() {
+    super.connect();
+    this.startHeartbeat();
+  }
+
+  onOpen(event) {
+    super.onOpen(event);
+    this.reconnectDelay = 1000; // Reset delay on successful connection
+  }
+
+  onClose(event) {
+    this.stopHeartbeat();
+    
+    // Exponential backoff for reconnection
+    setTimeout(() => {
+      this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
+      this.connect();
+    }, this.reconnectDelay);
+  }
+
+  startHeartbeat() {
+    this.heartbeatInterval = setInterval(() => {
+      this.send({ type: 'ping', data: {} });
+    }, 30000);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+}
 ```
 
 ---

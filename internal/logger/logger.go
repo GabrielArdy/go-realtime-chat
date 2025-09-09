@@ -141,7 +141,7 @@ func (l *Logger) formatText(entry LogEntry) string {
 	parts = append(parts, fmt.Sprintf("[%s]", entry.Level))
 	parts = append(parts, entry.Message)
 
-	if entry.Data != nil && len(entry.Data) > 0 {
+	if len(entry.Data) > 0 {
 		dataStr, _ := json.Marshal(entry.Data)
 		parts = append(parts, string(dataStr))
 	}

@@ -193,6 +193,7 @@ func main() {
 	auth := api.Group("/auth")
 	auth.POST("/login", userHandler.LoginUser)
 	auth.POST("/register", userHandler.RegisterUser)
+	auth.POST("/refresh", userHandler.RefreshToken)
 
 	// Room routes
 	rooms := api.Group("/rooms")

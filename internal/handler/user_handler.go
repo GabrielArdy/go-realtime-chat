@@ -345,6 +345,87 @@ func (h *UserHandler) LoginUser(c echo.Context) error {
 	})
 }
 
+func (h *UserHandler) RefreshToken(c echo.Context) error {
+	// Get refresh token from Authorization header
+	authHeader := c.Request().Header.Get("Authorization")
+	if authHeader == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Authorization header is required",
+			Error:   "Missing Authorization header",
+		})
+	}
+
+	// Extract token from "Bearer <token>" format
+	var refreshToken string
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		refreshToken = authHeader[7:]
+	} else {
+		// Try to get token directly if not in Bearer format
+		refreshToken = authHeader
+	}
+
+	if refreshToken == "" {
+		return c.JSON(http.StatusBadRequest, model.APIResponse{
+			Success: false,
+			Message: "Invalid authorization header format",
+			Error:   "Expected 'Bearer <token>' format",
+		})
+	}
+
+	// Validate and refresh the token
+	jwtService := jwt.GetService()
+	if jwtService == nil {
+		logger.Error("JWT service not initialized")
+		return c.JSON(http.StatusInternalServerError, model.APIResponse{
+			Success: false,
+			Message: "Authentication service unavailable",
+		})
+	}
+
+	// Generate new access token using refresh token
+	newAccessToken, expiresAt, err := jwtService.RefreshAccessToken(refreshToken)
+	if err != nil {
+		logger.Warn("Invalid refresh token attempt", logger.WithFields(map[string]interface{}{
+			"error": err.Error(),
+			"ip":    c.RealIP(),
+		}))
+		return c.JSON(http.StatusUnauthorized, model.APIResponse{
+			Success: false,
+			Message: "Invalid or expired refresh token",
+			Error:   "Token refresh failed",
+		})
+	}
+
+	// Get user info from the original refresh token claims for response
+	claims, err := jwtService.ValidateToken(refreshToken)
+	if err != nil {
+		logger.Error("Failed to validate refresh token claims", logger.WithField("error", err.Error()))
+		return c.JSON(http.StatusUnauthorized, model.APIResponse{
+			Success: false,
+			Message: "Invalid refresh token",
+		})
+	}
+
+	logger.Info("Token refreshed successfully", logger.WithFields(map[string]interface{}{
+		"user_id":    claims.UserID,
+		"session_id": claims.SessionID,
+		"ip":         c.RealIP(),
+	}))
+
+	return c.JSON(http.StatusOK, model.APIResponse{
+		Success: true,
+		Message: "Token refreshed successfully",
+		Data: map[string]interface{}{
+			"access_token": newAccessToken,
+			"expires_at":   expiresAt,
+			"token_type":   "Bearer",
+			"user_id":      claims.UserID,
+			"session_id":   claims.SessionID,
+		},
+	})
+}
+
 func (h *UserHandler) UpdateUser(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)

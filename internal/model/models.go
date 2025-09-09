@@ -96,6 +96,7 @@ type User struct {
 	AutoJoinPublicRooms bool   `json:"auto_join_public_rooms" gorm:"default:false"`
 
 	// Relationships
+	Profile       *UserProfile   `json:"profile,omitempty" gorm:"foreignKey:UserID"`
 	Sessions      []UserSession  `json:"sessions,omitempty" gorm:"foreignKey:UserID"`
 	RoomMembers   []RoomMember   `json:"room_members,omitempty" gorm:"foreignKey:UserID"`
 	Messages      []Message      `json:"messages,omitempty" gorm:"foreignKey:SenderID"`
@@ -399,6 +400,10 @@ type LoginRequest struct {
 	Password   string `json:"password" validate:"required"`
 	DeviceID   string `json:"device_id" validate:"required"`
 	DeviceType string `json:"device_type,omitempty"` // web, mobile, desktop
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
 type UpdateUserRequest struct {
