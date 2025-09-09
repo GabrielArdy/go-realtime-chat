@@ -83,7 +83,7 @@ func (h *UserHandler) RegisterUser(c echo.Context) error {
 	user, err := h.userService.CreateUser(c.Request().Context(), &req)
 	if err != nil {
 		logger.Error("Failed to register user", logger.WithField("error", err.Error()))
-		
+
 		// Check for specific errors
 		if err.Error() == "user with email "+req.Email+" already exists" {
 			return c.JSON(http.StatusConflict, model.APIResponse{
@@ -97,7 +97,7 @@ func (h *UserHandler) RegisterUser(c echo.Context) error {
 				Message: "Username is already taken",
 			})
 		}
-		
+
 		return c.JSON(http.StatusBadRequest, model.APIResponse{
 			Success: false,
 			Message: "Failed to register user",

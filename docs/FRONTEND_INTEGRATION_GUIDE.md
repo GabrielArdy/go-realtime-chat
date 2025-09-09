@@ -73,43 +73,167 @@ Frontend App ↔ REST API (CRUD) ↔ Event System ↔ WebSocket ↔ Real-time Up
 
 ### Authentication Schemas
 
-#### Login Request
-```json
-{
-  "username": "john_doe",
-  "password": "securePassword123"
-}
-```
-
-#### Login Response
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": "uuid-string",
-      "username": "john_doe",
-      "email": "john@example.com",
-      "display_name": "John Doe",
-      "avatar": "https://example.com/avatar.jpg",
-      "status": "online",
-      "is_verified": true,
-      "created_at": "2023-01-01T00:00:00Z",
-      "updated_at": "2023-01-01T00:00:00Z"
-    }
-  }
-}
-```
-
 #### Register Request
 ```json
 {
   "username": "john_doe",
   "email": "john@example.com",
   "password": "securePassword123",
-  "display_name": "John Doe"
+  "first_name": "John",
+  "last_name": "Doe",
+  "phone_number": "+1234567890",
+  "bio": "Software Developer"
+}
+```
+
+#### Register Response (Success)
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "id": "uuid-string",
+      "username": "john_doe",
+      "email": "john@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "avatar": "",
+      "phone_number": "+1234567890",
+      "bio": "Software Developer",
+      "status": "offline",
+      "last_seen": null,
+      "is_active": true,
+      "is_verified": false,
+      "language": "en",
+      "timezone": "UTC",
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    },
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_at": "2023-01-01T01:00:00Z",
+    "session_id": "uuid-string"
+  }
+}
+```
+
+#### Register Response (Error - Email Exists)
+```json
+{
+  "success": false,
+  "message": "Email address is already registered"
+}
+```
+
+#### Register Response (Error - Username Taken)
+```json
+{
+  "success": false,
+  "message": "Username is already taken"
+}
+```
+
+#### Register Response (Error - Validation)
+```json
+{
+  "success": false,
+  "message": "First name is required"
+}
+```
+
+#### Login Request
+```json
+{
+  "email": "john@example.com",
+  "password": "securePassword123",
+  "device_id": "browser-uuid-or-identifier",
+  "device_type": "web"
+}
+```
+
+#### Login Response (Success)
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": "uuid-string",
+      "username": "john_doe",
+      "email": "john@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "avatar": "https://example.com/avatar.jpg",
+      "phone_number": "+1234567890",
+      "bio": "Software Developer",
+      "status": "online",
+      "last_seen": "2023-01-01T00:00:00Z",
+      "is_active": true,
+      "is_verified": true,
+      "language": "en",
+      "timezone": "UTC",
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    },
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_at": "2023-01-01T01:00:00Z",
+    "session_id": "uuid-string"
+  }
+}
+```
+
+#### Login Response (Error - Invalid Credentials)
+```json
+{
+  "success": false,
+  "message": "Authentication failed",
+  "error": "Invalid credentials"
+}
+```
+
+#### Login Response (Error - Account Inactive)
+```json
+{
+  "success": false,
+  "message": "Authentication failed",
+  "error": "User account is inactive"
+}
+```
+
+#### Refresh Token Request
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### Refresh Token Response
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_at": "2023-01-01T02:00:00Z"
+  }
+}
+```
+
+#### Logout Request
+```json
+{
+  "session_id": "uuid-string"
+}
+```
+
+#### Logout Response
+```json
+{
+  "success": true,
+  "message": "Logout successful"
 }
 ```
 
@@ -121,14 +245,55 @@ Frontend App ↔ REST API (CRUD) ↔ Event System ↔ WebSocket ↔ Real-time Up
   "id": "uuid-string",
   "username": "john_doe",
   "email": "john@example.com",
-  "display_name": "John Doe",
+  "first_name": "John",
+  "last_name": "Doe",
   "avatar": "https://example.com/avatar.jpg",
+  "phone_number": "+1234567890",
+  "bio": "Software Developer passionate about real-time applications",
   "status": "online",
   "last_seen": "2023-01-01T00:00:00Z",
+  "is_active": true,
   "is_verified": true,
+  "language": "en",
+  "timezone": "UTC",
+  "notification_sound": true,
+  "email_notifications": true,
+  "push_notifications": true,
+  "show_online_status": true,
+  "show_read_receipts": true,
+  "allow_direct_messages": true,
+  "auto_join_public_rooms": false,
   "created_at": "2023-01-01T00:00:00Z",
   "updated_at": "2023-01-01T00:00:00Z"
 }
+```
+
+#### Update User Profile Request
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "bio": "Updated bio text",
+  "avatar": "https://example.com/new-avatar.jpg",
+  "phone_number": "+1234567890",
+  "status": "online"
+}
+```
+
+#### Update User Settings Request
+```json
+{
+  "language": "en",
+  "timezone": "America/New_York",
+  "notification_sound": true,
+  "email_notifications": false,
+  "push_notifications": true,
+  "show_online_status": true,
+  "show_read_receipts": false,
+  "allow_direct_messages": true,
+  "auto_join_public_rooms": false
+}
+```
 ```
 
 ### Room Schemas
@@ -825,57 +990,282 @@ chatWS.handleMessage = (message) => {
 
 ## 🔐 Authentication Flow
 
-### 1. User Login
+### 1. User Registration
 ```javascript
-// POST /api/v1/auth/login
-const loginUser = async (username, password) => {
+// POST /api/v1/auth/register
+const registerUser = async (userData) => {
   try {
-    const response = await fetch('/api/v1/auth/login', {
+    const response = await fetch('/api/v1/auth/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        username,
-        password
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        phone_number: userData.phoneNumber, // optional
+        bio: userData.bio // optional
       })
     });
     
     const data = await response.json();
     
     if (data.success) {
-      // Store JWT token
-      localStorage.setItem('token', data.data.token);
+      // Store JWT tokens
+      localStorage.setItem('access_token', data.data.access_token);
+      localStorage.setItem('refresh_token', data.data.refresh_token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
+      localStorage.setItem('session_id', data.data.session_id);
       return data.data;
+    } else {
+      throw new Error(data.message);
+    }
+  } catch (error) {
+    console.error('Registration failed:', error);
+    throw error;
+  }
+};
+
+// Example usage
+const handleRegistration = async (formData) => {
+  try {
+    const result = await registerUser({
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      phoneNumber: formData.phoneNumber,
+      bio: formData.bio
+    });
+    
+    // User is automatically logged in after registration
+    console.log('Registration successful:', result);
+    // Redirect to dashboard or initialize app
+    initializeApp(result);
+  } catch (error) {
+    // Handle specific errors
+    if (error.message === 'Email address is already registered') {
+      showError('This email is already registered. Please try logging in instead.');
+    } else if (error.message === 'Username is already taken') {
+      showError('This username is already taken. Please choose another one.');
+    } else {
+      showError('Registration failed. Please try again.');
+    }
+  }
+};
+```
+
+### 2. User Login
+```javascript
+// POST /api/v1/auth/login
+const loginUser = async (email, password, deviceId = null) => {
+  try {
+    // Generate device ID if not provided
+    const actualDeviceId = deviceId || generateDeviceId();
+    
+    const response = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        device_id: actualDeviceId,
+        device_type: getDeviceType() // 'web', 'mobile', 'desktop'
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      // Store JWT tokens and user data
+      localStorage.setItem('access_token', data.data.access_token);
+      localStorage.setItem('refresh_token', data.data.refresh_token);
+      localStorage.setItem('user', JSON.stringify(data.data.user));
+      localStorage.setItem('session_id', data.data.session_id);
+      localStorage.setItem('device_id', actualDeviceId);
+      return data.data;
+    } else {
+      throw new Error(data.message || data.error);
     }
   } catch (error) {
     console.error('Login failed:', error);
     throw error;
   }
 };
+
+// Helper functions
+const generateDeviceId = () => {
+  return 'web_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+};
+
+const getDeviceType = () => {
+  if (typeof window !== 'undefined') {
+    if (window.navigator.userAgent.includes('Mobile')) {
+      return 'mobile';
+    }
+    return 'web';
+  }
+  return 'unknown';
+};
 ```
 
-### 2. Token Management
+### 3. Token Management
 ```javascript
-// Get stored token for API calls
-const getAuthToken = () => {
-  return localStorage.getItem('token');
+// Get stored tokens for API calls
+const getAuthTokens = () => {
+  return {
+    accessToken: localStorage.getItem('access_token'),
+    refreshToken: localStorage.getItem('refresh_token'),
+    sessionId: localStorage.getItem('session_id')
+  };
+};
+
+// Check if user is authenticated
+const isAuthenticated = () => {
+  const { accessToken } = getAuthTokens();
+  if (!accessToken) return false;
+  
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+    const expiryTime = payload.exp * 1000;
+    return Date.now() < expiryTime;
+  } catch (error) {
+    return false;
+  }
+};
+
+// Refresh access token
+const refreshAccessToken = async () => {
+  try {
+    const { refreshToken } = getAuthTokens();
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+    
+    const response = await fetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${refreshToken}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      localStorage.setItem('access_token', data.data.access_token);
+      localStorage.setItem('refresh_token', data.data.refresh_token);
+      return data.data.access_token;
+    } else {
+      throw new Error('Token refresh failed');
+    }
+  } catch (error) {
+    console.error('Token refresh failed:', error);
+    // Clear tokens and redirect to login
+    clearAuthData();
+    window.location.href = '/login';
+    throw error;
+  }
 };
 
 // Create authenticated fetch wrapper
 const authenticatedFetch = async (url, options = {}) => {
-  const token = getAuthToken();
+  let { accessToken } = getAuthTokens();
+  
+  // Check if token needs refresh
+  if (!isAuthenticated()) {
+    try {
+      accessToken = await refreshAccessToken();
+    } catch (error) {
+      throw new Error('Authentication required');
+    }
+  }
   
   return fetch(url, {
     ...options,
     headers: {
       ...options.headers,
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     }
   });
 };
+```
+
+### 4. Logout
+```javascript
+// POST /api/v1/auth/logout
+const logoutUser = async () => {
+  try {
+    const { sessionId } = getAuthTokens();
+    
+    if (sessionId) {
+      await authenticatedFetch('/api/v1/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({
+          session_id: sessionId
+        })
+      });
+    }
+  } catch (error) {
+    console.error('Logout request failed:', error);
+    // Continue with local cleanup even if server request fails
+  } finally {
+    // Clear local storage
+    clearAuthData();
+    // Redirect to login
+    window.location.href = '/login';
+  }
+};
+
+const clearAuthData = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('session_id');
+  localStorage.removeItem('device_id');
+};
+```
+
+### 5. Auto-refresh Token Setup
+```javascript
+// Setup automatic token refresh
+const setupTokenRefresh = () => {
+  const { accessToken } = getAuthTokens();
+  if (!accessToken) return;
+  
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+    const expiryTime = payload.exp * 1000;
+    const currentTime = Date.now();
+    const timeUntilExpiry = expiryTime - currentTime;
+    
+    // Refresh 5 minutes before expiry
+    const refreshTime = timeUntilExpiry - (5 * 60 * 1000);
+    
+    if (refreshTime > 0) {
+      setTimeout(async () => {
+        try {
+          await refreshAccessToken();
+          setupTokenRefresh(); // Setup next refresh
+        } catch (error) {
+          console.error('Auto token refresh failed:', error);
+        }
+      }, refreshTime);
+    }
+  } catch (error) {
+    console.error('Failed to setup token refresh:', error);
+  }
+};
+
+// Call this after login or app initialization
+setupTokenRefresh();
 ```
 
 ---
@@ -1282,7 +1672,772 @@ chatWS.on('error', (data) => {
 
 ---
 
-## 💬 Chat Implementation
+## � Authentication Examples
+
+### 1. Registration Form Component (React)
+
+```javascript
+import React, { useState } from 'react';
+
+const RegistrationForm = ({ onRegistrationSuccess }) => {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+    bio: ''
+  });
+  
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Required fields
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const result = await registerUser({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber || undefined,
+        bio: formData.bio || undefined
+      });
+
+      onRegistrationSuccess(result);
+    } catch (error) {
+      if (error.message === 'Email address is already registered') {
+        setErrors({ email: 'This email is already registered' });
+      } else if (error.message === 'Username is already taken') {
+        setErrors({ username: 'This username is already taken' });
+      } else {
+        setErrors({ general: 'Registration failed. Please try again.' });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="registration-form">
+      <h2>Create Account</h2>
+      
+      {errors.general && (
+        <div className="error-banner">{errors.general}</div>
+      )}
+
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor="firstName">First Name *</label>
+          <input
+            type="text"
+            id="firstName"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            className={errors.firstName ? 'error' : ''}
+            disabled={isLoading}
+          />
+          {errors.firstName && <span className="error">{errors.firstName}</span>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="lastName">Last Name *</label>
+          <input
+            type="text"
+            id="lastName"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            className={errors.lastName ? 'error' : ''}
+            disabled={isLoading}
+          />
+          {errors.lastName && <span className="error">{errors.lastName}</span>}
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="username">Username *</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          value={formData.username}
+          onChange={handleChange}
+          className={errors.username ? 'error' : ''}
+          disabled={isLoading}
+          placeholder="Choose a unique username"
+        />
+        {errors.username && <span className="error">{errors.username}</span>}
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="email">Email *</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          className={errors.email ? 'error' : ''}
+          disabled={isLoading}
+          placeholder="your@email.com"
+        />
+        {errors.email && <span className="error">{errors.email}</span>}
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor="password">Password *</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            className={errors.password ? 'error' : ''}
+            disabled={isLoading}
+            placeholder="At least 6 characters"
+          />
+          {errors.password && <span className="error">{errors.password}</span>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="confirmPassword">Confirm Password *</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            className={errors.confirmPassword ? 'error' : ''}
+            disabled={isLoading}
+            placeholder="Repeat your password"
+          />
+          {errors.confirmPassword && <span className="error">{errors.confirmPassword}</span>}
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="phoneNumber">Phone Number</label>
+        <input
+          type="tel"
+          id="phoneNumber"
+          name="phoneNumber"
+          value={formData.phoneNumber}
+          onChange={handleChange}
+          disabled={isLoading}
+          placeholder="+1234567890 (optional)"
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="bio">Bio</label>
+        <textarea
+          id="bio"
+          name="bio"
+          value={formData.bio}
+          onChange={handleChange}
+          disabled={isLoading}
+          placeholder="Tell us about yourself (optional)"
+          rows="3"
+        />
+      </div>
+
+      <button 
+        type="submit" 
+        disabled={isLoading}
+        className="submit-button"
+      >
+        {isLoading ? 'Creating Account...' : 'Create Account'}
+      </button>
+
+      <p className="login-link">
+        Already have an account? <a href="/login">Sign in here</a>
+      </p>
+    </form>
+  );
+};
+
+export default RegistrationForm;
+```
+
+### 2. Login Form Component (React)
+
+```javascript
+import React, { useState } from 'react';
+
+const LoginForm = ({ onLoginSuccess }) => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    rememberMe: false
+  });
+  
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.email || !formData.password) {
+      setErrors({ general: 'Please fill in all fields' });
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const result = await loginUser(formData.email, formData.password);
+      onLoginSuccess(result);
+    } catch (error) {
+      if (error.message === 'Authentication failed' || error.message === 'Invalid credentials') {
+        setErrors({ general: 'Invalid email or password' });
+      } else if (error.message === 'User account is inactive') {
+        setErrors({ general: 'Your account has been deactivated. Please contact support.' });
+      } else {
+        setErrors({ general: 'Login failed. Please try again.' });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+    
+    // Clear errors when user starts typing
+    if (errors.general) {
+      setErrors({});
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="login-form">
+      <h2>Sign In</h2>
+      
+      {errors.general && (
+        <div className="error-banner">{errors.general}</div>
+      )}
+
+      <div className="form-group">
+        <label htmlFor="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          disabled={isLoading}
+          placeholder="your@email.com"
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+          disabled={isLoading}
+          placeholder="Your password"
+          required
+        />
+      </div>
+
+      <div className="form-group checkbox-group">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            name="rememberMe"
+            checked={formData.rememberMe}
+            onChange={handleChange}
+            disabled={isLoading}
+          />
+          Remember me
+        </label>
+      </div>
+
+      <button 
+        type="submit" 
+        disabled={isLoading || !formData.email || !formData.password}
+        className="submit-button"
+      >
+        {isLoading ? 'Signing In...' : 'Sign In'}
+      </button>
+
+      <div className="form-links">
+        <a href="/forgot-password">Forgot password?</a>
+        <span>•</span>
+        <a href="/register">Create account</a>
+      </div>
+    </form>
+  );
+};
+
+export default LoginForm;
+```
+
+### 3. Authentication Context Provider (React)
+
+```javascript
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+const AuthContext = createContext();
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const storedUser = localStorage.getItem('user');
+      const { accessToken } = getAuthTokens();
+
+      if (storedUser && accessToken && isTokenValid(accessToken)) {
+        setUser(JSON.parse(storedUser));
+        setIsAuthenticated(true);
+        setupTokenRefresh();
+      } else {
+        clearAuthData();
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      clearAuthData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isTokenValid = (token) => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return Date.now() < payload.exp * 1000;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const login = async (email, password) => {
+    setLoading(true);
+    try {
+      const result = await loginUser(email, password);
+      setUser(result.user);
+      setIsAuthenticated(true);
+      setupTokenRefresh();
+      return result;
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (userData) => {
+    setLoading(true);
+    try {
+      const result = await registerUser(userData);
+      setUser(result.user);
+      setIsAuthenticated(true);
+      setupTokenRefresh();
+      return result;
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    setLoading(true);
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setIsAuthenticated(false);
+      setLoading(false);
+    }
+  };
+
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
+  const value = {
+    user,
+    loading,
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    updateUser,
+    checkAuthStatus
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+```
+
+### 4. Protected Route Component
+
+```javascript
+import React from 'react';
+import { useAuth } from './AuthContext';
+
+const ProtectedRoute = ({ children, fallback = null }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="loading-spinner">
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return fallback || <LoginForm />;
+  }
+
+  return children;
+};
+
+export default ProtectedRoute;
+```
+
+### 5. Authentication Form Styling (CSS)
+
+```css
+/* Authentication Forms Styling */
+.auth-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.registration-form,
+.login-form {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 500px;
+}
+
+.registration-form h2,
+.login-form h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #555;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-group input.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+}
+
+.form-group .error {
+  color: #e74c3c;
+  font-size: 14px;
+  margin-top: 5px;
+  display: block;
+}
+
+.error-banner {
+  background-color: #ffe6e6;
+  color: #d8000c;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #ffb3b3;
+  text-align: center;
+}
+
+.checkbox-group {
+  margin-bottom: 25px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #555;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin-right: 8px;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submit-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.form-links {
+  text-align: center;
+  color: #666;
+}
+
+.form-links a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.form-links a:hover {
+  text-decoration: underline;
+}
+
+.form-links span {
+  margin: 0 10px;
+  color: #ccc;
+}
+
+.login-link {
+  text-align: center;
+  color: #666;
+  margin: 0;
+}
+
+.login-link a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
+}
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 18px;
+  color: #666;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .auth-container {
+    padding: 10px;
+  }
+  
+  .registration-form,
+  .login-form {
+    padding: 30px 20px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  
+  .registration-form h2,
+  .login-form h2 {
+    font-size: 24px;
+  }
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .registration-form,
+  .login-form {
+    background: #2c2c2c;
+    color: #fff;
+  }
+  
+  .registration-form h2,
+  .login-form h2 {
+    color: #fff;
+  }
+  
+  .form-group label {
+    color: #ccc;
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    background: #3a3a3a;
+    border-color: #555;
+    color: #fff;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    border-color: #667eea;
+  }
+  
+  .checkbox-label {
+    color: #ccc;
+  }
+  
+  .form-links {
+    color: #aaa;
+  }
+  
+  .login-link {
+    color: #aaa;
+  }
+}
+```
+
+---
+
+## �💬 Chat Implementation
 
 ### 1. Chat Room Component (React Example)
 
